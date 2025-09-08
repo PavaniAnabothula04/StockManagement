@@ -1,53 +1,58 @@
 package com.ofss.util;
 
-import jakarta.servlet.*;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import java.io.IOException;
+import java.util.Collections;
 
 @Component
-public class JwtFilter implements Filter {
+public class JwtFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jwtUtil;
-
-    public JwtFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-    }
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
- 
-        HttpServletRequest req = (HttpServletRequest) request;
-        HttpServletResponse res = (HttpServletResponse) response;
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
 
-        String path = req.getRequestURI();
-
-        // Why skip auth endpoints?
-        // Register and login should be accessible without token
-        if (path.startsWith("/api/auth")) {
-            chain.doFilter(request, response);
-            return;
-        }
-
-        
-        // check header where frontend/client sends token
-        String authHeader = req.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
-            
-            // validate Make sure token is not expired or tampered
             if (jwtUtil.validateToken(token)) {
-                chain.doFilter(request, response); //Continue
+                // ✅ Create authentication object and set it
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        jwtUtil.extractEmail(token), // principal
+                        null,
+                        Collections.emptyList() // no roles for now
+                );
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid or expired JWT token");
+                return;
+            }
+        } else {
+            // block if no token for protected routes
+            if (!request.getRequestURI().contains("/api/auth/login")
+                    && !request.getRequestURI().contains("/api/auth/register")) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Authorization header missing");
+                System.out.println(request.getRequestURI()+ "not allowed cox no token");
                 return;
             }
         }
 
-        //If no valid token
-        res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        res.getWriter().write("Unauthorized or invalid token");
+        filterChain.doFilter(request, response);
     }
 }

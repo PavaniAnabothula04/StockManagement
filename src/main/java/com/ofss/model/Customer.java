@@ -18,7 +18,7 @@
         @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
         private String password;
         private String city;
-        private String phoneNumber;
+        private long phoneNumber;
 
         // @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
         // @JsonIgnore
@@ -29,7 +29,7 @@
             super();
         }
 
-        public Customer(String emailId, String firstName, String lastName, String city, String phoneNumber) {
+        public Customer(String emailId, String firstName, String lastName, String city, long phoneNumber) {
             this.emailId = emailId;
             this.firstName = firstName;
             this.lastName = lastName;
@@ -59,8 +59,8 @@
 
         
 
-        public String getPhoneNumber() { return phoneNumber; }
-        public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+        public long getPhoneNumber() { return phoneNumber; }
+        public void setPhoneNumber(long phoneNumber) { this.phoneNumber = phoneNumber; }
 
         // public List<Transaction> getTransactions() { return transactions; }
         // public void setTransactions(List<Transaction> transactions) { this.transactions = transactions; }

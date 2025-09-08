@@ -10,18 +10,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.ofss.model.Stock;
 import com.ofss.dto.StockDTO;
+import com.ofss.model.Stock;
 import com.ofss.model.StockHistory;
 import com.ofss.repositories.StockHistoryRepository;
 import com.ofss.repositories.StockRepository;
 
-import jakarta.transaction.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
-@Transactional
 @Service
 public class StockService {
 
@@ -30,11 +30,9 @@ public class StockService {
 
     @Autowired
     private StockHistoryRepository shr;
-
     @Autowired
     private StockRecomendation stockrec;
 
-    // 1. View all stocks with color tags
     public ResponseEntity<Object> viewAllStocks() {
         List<Stock> stocks = sr.findAll();
 
@@ -52,22 +50,56 @@ public class StockService {
         return ResponseEntity.ok(stocks);
     }
 
-    // 2. Add a stock
+    // public ResponseEntity<Object> addStock(Stock stock) {
+    // // return ResponseEntity.status(201).body(sr.save(stock));
+    // try {
+    // Stock savedStock = sr.save(stock);
+    // return ResponseEntity.status(HttpStatus.CREATED).body(savedStock);
+    // } catch (Exception e) {
+    // e.printStackTrace();
+    // return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+    // .body("Error saving stock: " + e.getMessage());
+    // }
+    // }
+
+    // updated one and working but at home check it once
     public ResponseEntity<Object> addStock(Stock stock) {
-        return ResponseEntity.status(201).body(sr.save(stock));
+        try {
+            // Check for existing stock by symbol
+            Stock existing = sr.findBySymbol(stock.getSymbol());
+            if (existing != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Stock with symbol '" + stock.getSymbol() + "' already exists.");
+            }
+            Stock savedStock = sr.save(stock);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedStock);
+
+        } catch (DataIntegrityViolationException e) {
+            // Handles DB constraint violations
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Duplicate symbol error: " + e.getMessage());
+
+        } catch (Exception e) {
+            // Handles any other unexpected errors
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error saving stock: " + e.getMessage());
+        }
     }
 
-    // 3. Find stock by symbol
-    public ResponseEntity<Object> findBySymbol(String symbol) {
-        Stock stock = sr.findBySymbol(symbol);
-        return stock != null ? ResponseEntity.ok(stock) : ResponseEntity.notFound().build();
+    public ResponseEntity<Object> findBySymbol(String Symbol) {
+        Stock stock = sr.findBySymbol(Symbol);
+        if (stock == null) {
+            // return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Stock with symbol '" + Symbol + "' not found");
+        }
+        return ResponseEntity.ok(stock);
     }
 
-    public Stock getbysymbol(String symbol) {
+    // added this
+    public Stock getStockBySymbol(String symbol) {
         return sr.findBySymbol(symbol);
     }
-
-    // 4. Get stocks sorted by latest price
+   // 4. Get stocks sorted by latest price
     public ResponseEntity<Object> getAllStocksSortedByLatestPrice(String order) {
         List<Stock> stocks = sr.findAll();
         List<StockDTO> enrichedStocks = new ArrayList<>();

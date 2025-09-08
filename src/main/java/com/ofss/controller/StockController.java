@@ -6,7 +6,6 @@ import java.util.Date;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +21,6 @@ import com.ofss.model.Stock;
 import com.ofss.service.StockRecomendation;
 import com.ofss.service.StockService;
 
-@CrossOrigin(origins = "http://localhost:4200")
 @RestController
 @RequestMapping("/api")
 public class StockController {
@@ -56,7 +54,6 @@ public class StockController {
 
     @DeleteMapping("/stock/{symbol}")
     public ResponseEntity<Object> deleteBySymbol(@PathVariable String symbol) {
-        stockService.deleteAllHistoryForStock(symbol);
         return stockService.deleteBySymbol(symbol);
     }
 
@@ -68,7 +65,6 @@ public class StockController {
     public ResponseEntity<Object> getLatestPrice(@PathVariable String symbol) {
         return stockService.getLatestPrice(symbol);
     }
-
     @GetMapping("/stocks/sorted")
     public ResponseEntity<Object> sorted(@RequestParam(defaultValue = "asc") String order) {
         return stockService.getAllStocksSortedByLatestPrice(order);
@@ -93,7 +89,7 @@ public class StockController {
         // You have LocalDate objects (start, end),
         // but your service expects java.util.Date, so convert them:
         Date startdate = java.sql.Date.valueOf(start); // Convert LocalDate to java.sql.Date (which extends
-        // java.util.Date)
+                                                       // java.util.Date)
         Date enddate = java.sql.Date.valueOf(end);
 
         System.out.println("Start date: " + startdate);
@@ -102,11 +98,11 @@ public class StockController {
         return stockService.getAverageClosePrice(symbol, startdate, enddate);
     }
 
-    @DeleteMapping("/stock/{symbol}/history")
-    public ResponseEntity<Object> deleteAllHistoryForStock(@PathVariable String symbol) {
-        return stockService.deleteAllHistoryForStock(symbol);
-    }
-    
+    // @DeleteMapping("/stock/{symbol}/history")
+    // public ResponseEntity<Object> deleteAllHistoryForStock(@PathVariable String symbol) {
+    //     return stockService.deleteAllHistoryForStock(symbol);
+    // }
+
     @GetMapping("/stocks/top-movers")
     public ResponseEntity<Object> getTopMovers() {
         return stockService.getTopMovers();

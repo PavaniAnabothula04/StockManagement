@@ -1,61 +1,62 @@
-    package com.ofss.service;
+package com.ofss.service;
 
-    import java.util.List;
-    import org.springframework.stereotype.Service;
-    import com.ofss.model.Customer;
-    import com.ofss.repositories.CustomerRepository;
-    import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.List;
 
-    @Service
-    public class CustomerService {
+import com.ofss.model.Customer;
+import com.ofss.repositories.CustomerRepository;
 
-        private final CustomerRepository customerRepository;
-        private final PasswordEncoder passwordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
 
-        public CustomerService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder) {
-            this.customerRepository = customerRepository;
-            this.passwordEncoder = passwordEncoder;
+@Service
+public class CustomerService {
+
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    public List<Customer> getAllCustomers() {
+        return customerRepository.findAll();
+    }
+
+    public Customer getCustomerByEmail(String email) {
+        return customerRepository.findByEmailId(email);
+    }
+
+    public Customer saveCustomer(Customer customer) {
+        return customerRepository.save(customer);
+    }
+
+    public void deleteCustomer(String email) {
+        if (!customerRepository.existsById(email)) {
+            throw new RuntimeException("Customer not found with email: " + email);
         }
+        customerRepository.deleteById(email);
+    }
 
-        public List<Customer> getAllCustomers() {
-            return customerRepository.findAll();
-        }
-
-        public Customer getCustomerByEmail(String email) {
-            return customerRepository.findByEmailId(email);
-                    // .orElseThrow(() -> new ResourceNotFoundException("Customer not found with emailId: " + emailId));
-        }
-
-        public Customer saveCustomer(Customer customer) {
-            return customerRepository.save(customer);
-        }
-
-        public void deleteCustomer(String email) {
-            Customer existing = getCustomerByEmail(email);
-            customerRepository.delete(existing);
-        }
-
-
-        // Registration
-        public Customer registerCustomer(Customer customer) {
-            String normalizedEmail = customer.getEmailId();
-            customer.setEmailId(normalizedEmail);
-
-        Customer existingCustomer = customerRepository.findByEmailId(normalizedEmail);
-        if (existingCustomer != null) {
+    // Register customer
+    public Customer registerCustomer(Customer customer) {
+        // check if email already exists
+        if (customerRepository.findByEmailId(customer.getEmailId()) != null) {
             throw new RuntimeException("Email already registered!");
         }
-            customer.setPassword(passwordEncoder.encode(customer.getPassword()));
-            return customerRepository.save(customer);
-        }
+        // hash the password before saving
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        String hashedPassword = passwordEncoder.encode(customer.getPassword());
+        customer.setPassword(hashedPassword);
+        return customerRepository.save(customer);
+    }
 
-
-        // Login
-        public Customer login(String email, String password) {
-        Customer existingCustomer = customerRepository.findByEmailId(email);
-        if (existingCustomer != null && passwordEncoder.matches(password, existingCustomer.getPassword())) {
-            return existingCustomer;
+    // Authenticate user
+    public Customer authenticate(String email, String password) {
+        Customer customer = customerRepository.findByEmailId(email);
+        if (customer != null) {
+            PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+            if (passwordEncoder.matches(password, customer.getPassword())) {
+                return customer;
+            }
         }
         return null;
-        }
     }
+}
